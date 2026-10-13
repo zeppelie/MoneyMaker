@@ -1,6 +1,6 @@
 // Uso: node test.js
 const assert = require('assert');
-const { SETTORI, profittoNetto, operazioni, riepilogoPerSettore } = require('./core.js');
+const { SETTORI, profittoNetto, operazioni, situazioneProdotti, riepilogoPerSettore } = require('./core.js');
 const { unisci } = require('./record.js');
 
 const oss = (data, tipo, prezzo, extra = {}) => ({ data, prodotto: 'nas1', tipo, prezzo, spedizione: 0,
@@ -24,6 +24,11 @@ assert.deepStrictEqual(riepilogoPerSettore(ops)[1],
 
 // Margine sotto il 15%: nessuna operazione.
 assert.strictEqual(operazioni({ prodotti, osservazioni: [oss('2026-10-01', 'mercato', 300), oss('2026-10-01', 'acquisto', 240)] }).length, 0);
+
+// Situazione prodotti: stima anche senza affare; senza prezzo di mercato nessuna stima.
+const situazione = situazioneProdotti({ prodotti, osservazioni: [oss('2026-10-01', 'mercato', 300), oss('2026-10-02', 'acquisto', 240)] })[0];
+assert.strictEqual(situazione.stima.profitto, 18); // 300*0.9 - 12 - 240
+assert.strictEqual(situazioneProdotti({ prodotti, osservazioni: [oss('2026-10-01', 'acquisto', 240)] })[0].stima, null);
 
 // Prezzo da annunci (non venduto): lo sconto prudenziale del 15% annulla l'affare apparente.
 assert.strictEqual(operazioni({ prodotti, osservazioni: [

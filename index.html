@@ -29,6 +29,9 @@
 <h2>Rendimento per settore</h2>
 <div class="tabella" id="settori"></div>
 
+<h2>Prodotti seguiti: ultimi prezzi rilevati</h2>
+<div class="tabella" id="prodotti"></div>
+
 <p class="nota">Simulazione: nessun acquisto reale. Profitti al netto di commissioni e spedizione stimate, tasse escluse.
 Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
 
@@ -87,6 +90,16 @@ Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
     MM_CORE.riepilogoPerSettore(operazioni).map((r) => [r.settore, r.chiuse, r.chiuse ? `${r.vincenti} su ${r.chiuse}` : '—',
       euro(r.investito), importo(r.profittoRealizzato), r.aperte, importo(r.profittoLatente)]),
     '');
+
+  const percento = (n) => n.toLocaleString('it-IT', { style: 'percent', maximumFractionDigits: 0 });
+  tabella('prodotti', ['Settore', 'Oggetto', 'Miglior acquisto', 'Costo con spedizione', 'Valore di mercato', 'Profitto netto atteso', 'Margine (soglia)'],
+    MM_CORE.situazioneProdotti(dati).map((p) => [p.settore, p.nome,
+      p.acquisto ? link(p.acquisto.sito, p.acquisto.url) : '—',
+      p.acquisto ? euro(p.acquisto.prezzo + p.acquisto.spedizione) : '—',
+      p.mercato ? link((p.mercato.venduto ? '' : '~') + euro(p.mercato.prezzo), p.mercato.url) : 'non rilevato',
+      p.stima ? importo(p.stima.profitto, !p.mercato.venduto) : '—',
+      p.stima ? `${percento(p.stima.margine)} (${percento(p.margineMinimo)})` : '—']),
+    'Nessun prodotto seguito.');
 </script>
 </body>
 </html>

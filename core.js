@@ -22,6 +22,12 @@
     return arrotonda(valoreVendita * (1 - settore.commissione) - settore.spedizioneVendita - costoAcquisto);
   }
 
+  function stimaAffare(acquisto, mercato, settore) {
+    const costo = arrotonda(acquisto.prezzo + acquisto.spedizione);
+    const profitto = profittoNetto(costo, valoreMercato(mercato, settore), settore);
+    return { costo, profitto, margine: profitto / costo };
+  }
+
   function validaProdotto(prodotto) {
     if (!prodotto || typeof prodotto.id !== 'string' || !prodotto.id) return 'prodotto senza id';
     if (!SETTORI[prodotto.settore]) return `prodotto ${prodotto.id}: settore sconosciuto "${prodotto.settore}"`;
@@ -61,9 +67,8 @@
         aperta = null;
       }
       if (o.tipo === 'acquisto' && !aperta && mercato) {
-        const costo = arrotonda(o.prezzo + o.spedizione);
-        const atteso = profittoNetto(costo, valoreMercato(mercato, settore), settore);
-        if (atteso / costo >= settore.margineMinimo) {
+        const { costo, profitto: atteso, margine } = stimaAffare(o, mercato, settore);
+        if (margine >= settore.margineMinimo) {
           aperta = { prodotto: prodotto.id, nome: prodotto.nome, settore: prodotto.settore, dataAcquisto: o.data, costo,
             sitoAcquisto: o.sito, urlAcquisto: o.url, vendereDal: aggiungiGiorni(o.data, settore.giorniVendita),
             sitoVendita: mercato.sito, urlVendita: mercato.url, prezzoStimato: !mercato.venduto, profittoAtteso: atteso };
@@ -80,6 +85,20 @@
     return dati.prodotti.flatMap((p) => operazioniProdotto(p, dati.osservazioni));
   }
 
+  // Ultimi prezzi rilevati per ogni prodotto, anche quando non c'è nessun affare: mostra che la raccolta funziona.
+  function situazioneProdotti(dati) {
+    return dati.prodotti.map((p) => {
+      const ultima = (tipo) => dati.osservazioni
+        .filter((o) => o.prodotto === p.id && o.tipo === tipo)
+        .sort((a, b) => a.data.localeCompare(b.data)).pop() || null;
+      const acquisto = ultima('acquisto');
+      const mercato = ultima('mercato');
+      const settore = SETTORI[p.settore];
+      return { nome: p.nome, settore: settore.nome, acquisto, mercato, margineMinimo: settore.margineMinimo,
+        stima: acquisto && mercato ? stimaAffare(acquisto, mercato, settore) : null };
+    });
+  }
+
   function riepilogoPerSettore(tutte) {
     return Object.entries(SETTORI).map(([id, settore]) => {
       const sue = tutte.filter((op) => op.settore === id);
@@ -92,7 +111,7 @@
     });
   }
 
-  const api = { SETTORI, valoreMercato, profittoNetto, validaProdotto, validaOsservazione, operazioni, riepilogoPerSettore };
+  const api = { SETTORI, valoreMercato, profittoNetto, validaProdotto, validaOsservazione, operazioni, situazioneProdotti, riepilogoPerSettore };
   if (typeof module !== 'undefined') module.exports = api;
   else root.MM_CORE = api;
 })(this);
