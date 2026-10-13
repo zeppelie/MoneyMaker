@@ -1,11 +1,12 @@
 # MoneyMaker
 
-Simulazione di compravendita di set LEGO da collezione in uscita di produzione (settore NAS sospeso): una routine giornaliera di Claude rileva i prezzi, la pagina segnala i set scontati di almeno il 25% sul listino e simula la rivendita diretta dopo 90 giorni, con obiettivo di margine del 15%. Nessun acquisto reale.
+Simulazione di compravendita su due settori: set LEGO da collezione in uscita di produzione e carte collezionabili sigillate (Pokémon, Magic, Yu-Gi-Oh!). Il settore NAS è sospeso. Una routine giornaliera di Claude rileva i prezzi, la pagina segnala cosa comprare e simula la rivendita diretta dopo 90 giorni, con obiettivo di margine del 15%. Nessun acquisto reale.
 
 ## Come funziona
 
 - `ROUTINE.md`: istruzioni che la sessione giornaliera di Claude segue per rilevare i prezzi.
 - `record.js`: valida le rilevazioni e le salva in `data.js`.
+- `cardmarket.js`: legge il valore di mercato delle carte dai file pubblici giornalieri di Cardmarket e cerca i prodotti nel catalogo.
 - `core.js`: calcolo di profitto netto e operazioni simulate (commissioni e soglie per settore in cima al file).
 - `index.html`: la pagina, statica, che legge `data.js` a ogni apertura.
 - `test.js`: verifica della logica (`node test.js`).

@@ -31,11 +31,12 @@ function unisci(dati, nuovo, oggi) {
   return { errori, dati: { prodotti, osservazioni } };
 }
 
-if (require.main === module) {
-  const dati = JSON.parse(fs.readFileSync(FILE_DATI, 'utf8').slice(PREFISSO.length).replace(/;\s*$/, ''));
-  const nuovo = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const leggiDati = () => JSON.parse(fs.readFileSync(FILE_DATI, 'utf8').slice(PREFISSO.length).replace(/;\s*$/, ''));
+
+// Valida e salva le rilevazioni di oggi; se c'è anche un solo errore non scrive niente ed esce con codice 1.
+function registra(nuovo) {
   const oggi = new Date().toLocaleDateString('sv'); // AAAA-MM-GG in ora locale
-  const esito = unisci(dati, nuovo, oggi);
+  const esito = unisci(leggiDati(), nuovo, oggi);
   if (esito.errori.length) {
     console.error('Niente salvato. Errori:\n- ' + esito.errori.join('\n- '));
     process.exit(1);
@@ -44,4 +45,6 @@ if (require.main === module) {
   console.log(`Salvato: ${esito.dati.prodotti.length} prodotti, ${esito.dati.osservazioni.length} osservazioni totali.`);
 }
 
-module.exports = { unisci };
+if (require.main === module) registra(JSON.parse(fs.readFileSync(process.argv[2], 'utf8')));
+
+module.exports = { unisci, leggiDati, registra };

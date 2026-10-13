@@ -2,6 +2,7 @@
 const assert = require('assert');
 const { SETTORI, profittoNetto, operazioni, situazioneProdotti, riepilogoPerSettore } = require('./core.js');
 const { unisci } = require('./record.js');
+const { osservazioniMercato } = require('./cardmarket.js');
 
 const oss = (data, tipo, prezzo, extra = {}) => ({ data, prodotto: 'lego1', tipo, prezzo, spedizione: 0,
   sito: 'BrickLink', url: 'https://example.com', venduto: true, ...extra });
@@ -22,8 +23,9 @@ assert.strictEqual(ops[0].stato, 'chiusa');
 assert.strictEqual(ops[0].profittoAtteso, 15);
 assert.strictEqual(ops[0].vendereDal, '2026-12-30');
 assert.strictEqual(ops[0].profitto, 20); // 95 - 75
-assert.deepStrictEqual(riepilogoPerSettore(ops),
-  [{ settore: 'LEGO', chiuse: 1, obiettivoRaggiunto: 1, profittoRealizzato: 20, investito: 75, aperte: 0, profittoLatente: 0 }]);
+assert.deepStrictEqual(riepilogoPerSettore(ops)[0],
+  { settore: 'LEGO', chiuse: 1, obiettivoRaggiunto: 1, profittoRealizzato: 20, investito: 75, aperte: 0, profittoLatente: 0 });
+assert.deepStrictEqual(riepilogoPerSettore(ops).map((r) => r.settore), ['LEGO', 'Carte collezionabili']); // NAS sospeso
 
 // Chiusa sotto l'obiettivo del 15%: conta come chiusa ma non come obiettivo raggiunto.
 ops = operazioni({ prodotti, osservazioni: [
@@ -36,6 +38,21 @@ const pocoSconto = [oss('2026-10-01', 'mercato', 90), oss('2026-10-01', 'acquist
 assert.strictEqual(operazioni({ prodotti, osservazioni: pocoSconto }).length, 0);
 const senzaListino = [{ id: 'lego1', settore: 'lego', nome: 'Vecchio prodotto' }];
 assert.strictEqual(operazioni({ prodotti: senzaListino, osservazioni: [oss('2026-10-01', 'mercato', 90), oss('2026-10-01', 'acquisto', 10)] }).length, 0);
+
+// Carte: regola a margine. Al listino (sconto 0) ma con mercato a +20% si apre; con mercato a +10% no.
+const carte = [{ id: 'tcg-pokemon-42', settore: 'tcg', nome: 'Box di prova', listino: 100 }];
+const ossCarte = (tipo, prezzo) => oss('2026-10-01', tipo, prezzo, { prodotto: 'tcg-pokemon-42' });
+assert.strictEqual(operazioni({ prodotti: carte, osservazioni: [ossCarte('mercato', 120), ossCarte('acquisto', 100)] }).length, 1);
+assert.strictEqual(operazioni({ prodotti: carte, osservazioni: [ossCarte('mercato', 110), ossCarte('acquisto', 100)] }).length, 0);
+assert.strictEqual(situazioneProdotti({ prodotti: carte, osservazioni: [ossCarte('mercato', 120), ossCarte('acquisto', 100)] })[0].segnale, true);
+
+// Cardmarket: venduto a 7 giorni se c'è, altrimenti trend; prodotto assente dal listino prezzi segnalato.
+const daCardmarket = osservazioniMercato(
+  [...carte, { id: 'tcg-pokemon-43', settore: 'tcg', nome: 'Solo trend', listino: 50 }, { id: 'tcg-pokemon-99', settore: 'tcg', nome: 'Assente', listino: 50 }],
+  { pokemon: [{ idProduct: 42, avg7: 118.5, trend: 130 }, { idProduct: 43, avg7: null, trend: 61 }] });
+assert.deepStrictEqual(daCardmarket.osservazioni.map((o) => o.prezzo), [118.5, 61]);
+assert.deepStrictEqual(daCardmarket.senzaPrezzo, ['tcg-pokemon-99']);
+assert.strictEqual(unisci({ prodotti: carte, osservazioni: [] }, { osservazioni: daCardmarket.osservazioni.slice(0, 1) }, '2026-10-01').errori.length, 0);
 
 // Settore sospeso: i prodotti già nello storico spariscono da operazioni e situazione.
 const nas = { prodotti: [{ id: 'lego1', settore: 'nas', nome: 'NAS', listino: 100 }], osservazioni: [oss('2026-10-01', 'mercato', 90), oss('2026-10-01', 'acquisto', 50)] };

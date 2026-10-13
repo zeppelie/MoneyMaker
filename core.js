@@ -5,6 +5,7 @@
   // alzarli se si passa a una piattaforma.
   const SETTORI = {
     lego: { nome: 'LEGO', commissione: 0, spedizioneVendita: 0, margineMinimo: 0.15, scontoMinimoListino: 0.25, giorniVendita: 90, scontoAnnunci: 0.15 },
+    tcg: { nome: 'Carte collezionabili', commissione: 0, spedizioneVendita: 0, margineMinimo: 0.15, giorniVendita: 90, scontoAnnunci: 0.15 },
     nas: { nome: 'NAS', sospeso: true, commissione: 0.10, spedizioneVendita: 12, margineMinimo: 0.15, scontoMinimoListino: 0.25, giorniVendita: 14, scontoAnnunci: 0.15 },
   };
   const TIPI = ['acquisto', 'mercato'];
@@ -24,6 +25,12 @@
 
   function profittoNetto(costoAcquisto, valoreVendita, settore) {
     return arrotonda(valoreVendita * (1 - settore.commissione) - settore.spedizioneVendita - costoAcquisto);
+  }
+
+  // Due regole di acquisto: sconto sul listino (settori con scontoMinimoListino, es. LEGO in ritiro)
+  // oppure margine immediato sul valore di mercato (es. carte sigillate comprate al dettaglio).
+  function eAffare(settore, sconto, margineAtteso) {
+    return settore.scontoMinimoListino === undefined ? margineAtteso >= settore.margineMinimo : sconto >= settore.scontoMinimoListino;
   }
 
   function validaProdotto(prodotto) {
@@ -48,7 +55,7 @@
   }
 
   // Ricostruisce il portafoglio simulato dallo storico: nessuno stato salvato, solo osservazioni.
-  // Si compra quando il prezzo scende abbastanza sotto il listino; si vende a giorniVendita dall'acquisto,
+  // Si compra quando scatta la regola di acquisto del settore; si vende a giorniVendita dall'acquisto,
   // per misurare se a quella data il margine obiettivo c'è davvero.
   // ponytail: una sola operazione aperta per prodotto e uscita solo a scadenza; aggiungere un'uscita
   // anticipata a obiettivo raggiunto se serve.
@@ -74,10 +81,11 @@
       if (o.tipo === 'acquisto' && !aperta && mercato) {
         const costo = costoTotale(o);
         const sconto = scontoSulListino(prodotto, costo);
-        if (sconto >= settore.scontoMinimoListino) {
+        const profittoAtteso = profittoNetto(costo, valoreMercato(mercato, settore), settore);
+        if (eAffare(settore, sconto, profittoAtteso / costo)) {
           aperta = { prodotto: prodotto.id, nome: prodotto.nome, settore: prodotto.settore, dataAcquisto: o.data, costo, sconto,
             sitoAcquisto: o.sito, urlAcquisto: o.url, vendereDal: aggiungiGiorni(o.data, settore.giorniVendita),
-            profittoAtteso: profittoNetto(costo, valoreMercato(mercato, settore), settore) };
+            profittoAtteso };
         }
       }
     }
@@ -100,9 +108,10 @@
       const settore = SETTORI[p.settore];
       const costo = acquisto ? costoTotale(acquisto) : null;
       const profitto = acquisto && mercato ? profittoNetto(costo, valoreMercato(mercato, settore), settore) : null;
-      return { nome: p.nome, settore: settore.nome, listino: p.listino, acquisto, mercato, costo,
-        sconto: acquisto ? scontoSulListino(p, costo) : null, scontoMinimo: settore.scontoMinimoListino,
-        profitto, margine: profitto === null ? null : profitto / costo };
+      const sconto = acquisto ? scontoSulListino(p, costo) : null;
+      const margine = profitto === null ? null : profitto / costo;
+      return { nome: p.nome, settore: settore.nome, listino: p.listino, acquisto, mercato, costo, sconto, profitto, margine,
+        segnale: profitto !== null && eAffare(settore, sconto, margine) };
     });
   }
 

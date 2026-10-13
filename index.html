@@ -32,7 +32,8 @@
 <h2>Prodotti seguiti: ultimi prezzi rilevati</h2>
 <div class="tabella" id="prodotti"></div>
 
-<p class="nota">Simulazione: nessun acquisto reale. Si compra quando il prezzo scende sotto il listino della soglia indicata e si vende dopo 90 giorni.
+<p class="nota">Simulazione: nessun acquisto reale. LEGO: si compra con almeno il 25% di sconto sul listino. Carte collezionabili: si compra quando
+il valore di mercato supera il costo di almeno il 15%. In entrambi i casi si vende dopo 90 giorni.
 Profitti calcolati per vendita diretta a mano: nessuna commissione né spedizione, tasse escluse.
 Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
 
@@ -98,14 +99,15 @@ Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
       euro(r.investito), importo(r.profittoRealizzato), r.aperte, importo(r.profittoLatente)]),
     '');
 
-  tabella('prodotti', ['Settore', 'Oggetto', 'Listino', 'Miglior acquisto', 'Costo con spedizione', 'Sconto (soglia)', 'Valore di mercato', 'Profitto se venduto oggi'],
+  tabella('prodotti', ['Settore', 'Oggetto', 'Listino', 'Miglior acquisto', 'Costo con spedizione', 'Sconto sul listino', 'Valore di mercato', 'Profitto se venduto oggi', 'Segnale'],
     prodotti.map((p) => [p.settore, p.nome,
       p.listino ? euro(p.listino) : '—',
       p.acquisto ? link(p.acquisto.sito, p.acquisto.url) : '—',
       p.acquisto ? euro(p.costo) : '—',
-      p.acquisto && p.listino ? `${percento(p.sconto)} (${percento(p.scontoMinimo)})` : '—',
+      p.acquisto && p.listino ? percento(p.sconto) : '—',
       p.mercato ? link((p.mercato.venduto ? '' : '~') + euro(p.mercato.prezzo), p.mercato.url) : 'non rilevato',
-      p.profitto === null ? '—' : profittoConMargine(p.profitto, p.margine, !p.mercato.venduto)]),
+      p.profitto === null ? '—' : profittoConMargine(p.profitto, p.margine, !p.mercato.venduto),
+      p.segnale ? 'comprare' : '—']),
     'Nessun prodotto seguito.');
 </script>
 </body>
