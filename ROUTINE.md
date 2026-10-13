@@ -14,7 +14,7 @@ Raccogli i prezzi di oggi e salvali. Non comprare né vendere niente: è solo un
 1. Leggi `data.js` per vedere i prodotti già seguiti. Se i set LEGO sono meno di 10, aggiungine da https://www.brickeconomy.com/sets/retiring-soon : probabilità di ritiro oltre l'80%, prezzo di listino da 30 € in su. Id prodotto: `lego-<numero set>`.
 2. Per ogni set seguito:
    - **mercato**: apri `https://www.bricklink.com/catalogPG.asp?S=<numero set>-1`, sezione "Last 6 Months Sales", colonna "New", riga "Avg Price". `venduto: true`, `sito: "BrickLink"`, `spedizione: 0`.
-   - **acquisto**: il prezzo nuovo più basso che trovi oggi in un negozio italiano (o che spedisce in Italia), con la spedizione. `venduto: false`, `url` della pagina dell'offerta.
+   - **acquisto**: il prezzo nuovo più basso che trovi oggi in un negozio italiano (o che spedisce in Italia), con la spedizione. `venduto: false`, `url` della pagina dell'offerta. Confrontalo sempre con il prezzo di listino su LEGO Shop: se l'offerta trovata costa più del listino e il set è disponibile su LEGO Shop, registra LEGO Shop al prezzo di listino.
 
 ## 2. NAS (al massimo 5 modelli seguiti)
 
