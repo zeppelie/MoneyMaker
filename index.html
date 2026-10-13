@@ -23,7 +23,7 @@
 <h2>Segnali di oggi: cosa e dove comprare</h2>
 <div class="tabella" id="segnali"></div>
 
-<h2>Portafoglio simulato: quando e dove vendere</h2>
+<h2>Portafoglio simulato: quando vendere</h2>
 <div class="tabella" id="portafoglio"></div>
 
 <h2>Rendimento per settore</h2>
@@ -32,13 +32,15 @@
 <h2>Prodotti seguiti: ultimi prezzi rilevati</h2>
 <div class="tabella" id="prodotti"></div>
 
-<p class="nota">Simulazione: nessun acquisto reale. Profitti al netto di commissioni e spedizione stimate, tasse escluse.
+<p class="nota">Simulazione: nessun acquisto reale. Si compra quando il prezzo scende sotto il listino della soglia indicata e si vende dopo 90 giorni.
+Profitti calcolati per vendita diretta a mano: nessuna commissione né spedizione, tasse escluse.
 Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
 
 <script src="data.js"></script>
 <script src="core.js"></script>
 <script>
   const euro = (n) => n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+  const percento = (n) => n.toLocaleString('it-IT', { style: 'percent', maximumFractionDigits: 0 });
 
   function cella(contenuto) {
     const td = document.createElement('td');
@@ -50,12 +52,15 @@ Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
     a.textContent = testo; a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
     return a;
   }
-  function importo(n, stimato) {
+  function colorato(testo, n) {
     const span = document.createElement('span');
-    span.textContent = (stimato ? '~' : '') + euro(n);
+    span.textContent = testo;
     span.className = n > 0 ? 'positivo' : n < 0 ? 'negativo' : '';
     return span;
   }
+  const importo = (n, stimato) => colorato((stimato ? '~' : '') + euro(n), n);
+  const profittoConMargine = (profitto, margine, stimato) => colorato(`${stimato ? '~' : ''}${euro(profitto)} (${percento(margine)})`, profitto);
+
   function tabella(idContenitore, intestazioni, righe, messaggioVuoto) {
     const contenitore = document.getElementById(idContenitore);
     if (!righe.length) { contenitore.textContent = messaggioVuoto; return; }
@@ -69,36 +74,38 @@ Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
 
   const dati = window.MM_DATI;
   const operazioni = MM_CORE.operazioni(dati);
+  const prodotti = MM_CORE.situazioneProdotti(dati);
   const ultimaData = dati.osservazioni.map((o) => o.data).sort().pop();
   const nomeSettore = (op) => MM_CORE.SETTORI[op.settore].nome;
 
   document.getElementById('aggiornamento').textContent = ultimaData
-    ? `Ultima rilevazione: ${ultimaData} · ${dati.prodotti.length} prodotti seguiti`
+    ? `Ultima rilevazione: ${ultimaData} · ${prodotti.length} prodotti seguiti`
     : 'Nessuna rilevazione: la routine giornaliera non è ancora stata eseguita.';
 
-  tabella('segnali', ['Settore', 'Oggetto', 'Dove comprare', 'Costo con spedizione', 'Profitto netto atteso', 'Vendere dal', 'Dove vendere'],
+  tabella('segnali', ['Settore', 'Oggetto', 'Dove comprare', 'Costo con spedizione', 'Sconto sul listino', 'Profitto netto atteso', 'Vendere dal', 'Prezzo di riferimento'],
     operazioni.filter((op) => op.dataAcquisto === ultimaData).map((op) => [nomeSettore(op), op.nome,
-      link(op.sitoAcquisto, op.urlAcquisto), euro(op.costo), importo(op.profittoAtteso, op.prezzoStimato), op.vendereDal, link(op.sitoVendita, op.urlVendita)]),
-    'Nessun affare sopra la soglia di margine oggi.');
+      link(op.sitoAcquisto, op.urlAcquisto), euro(op.costo), percento(op.sconto),
+      profittoConMargine(op.profittoAtteso, op.profittoAtteso / op.costo, op.prezzoStimato), op.vendereDal, link(op.sitoVendita, op.urlVendita)]),
+    'Nessun prodotto sotto la soglia di sconto oggi.');
 
-  tabella('portafoglio', ['Stato', 'Settore', 'Oggetto', 'Comprato il', 'Costo', 'Vendere dal / venduto il', 'Dove vendere', 'Profitto netto'],
+  tabella('portafoglio', ['Stato', 'Settore', 'Oggetto', 'Comprato il', 'Costo', 'Vendere dal / venduto il', 'Prezzo di riferimento', 'Profitto netto (margine)'],
     operazioni.map((op) => [op.stato, nomeSettore(op), op.nome, op.dataAcquisto, euro(op.costo),
-      op.dataVendita || op.vendereDal, link(op.sitoVendita, op.urlVendita), importo(op.profitto, op.prezzoStimato)]),
+      op.dataVendita || op.vendereDal, link(op.sitoVendita, op.urlVendita), profittoConMargine(op.profitto, op.margine, op.prezzoStimato)]),
     'Nessuna operazione simulata.');
 
-  tabella('settori', ['Settore', 'Operazioni chiuse', 'In profitto', 'Capitale investito', 'Profitto realizzato', 'Aperte', 'Profitto latente'],
-    MM_CORE.riepilogoPerSettore(operazioni).map((r) => [r.settore, r.chiuse, r.chiuse ? `${r.vincenti} su ${r.chiuse}` : '—',
+  tabella('settori', ['Settore', 'Operazioni chiuse', 'Obiettivo di margine raggiunto', 'Capitale investito', 'Profitto realizzato', 'Aperte', 'Profitto latente'],
+    MM_CORE.riepilogoPerSettore(operazioni).map((r) => [r.settore, r.chiuse, r.chiuse ? `${r.obiettivoRaggiunto} su ${r.chiuse}` : '—',
       euro(r.investito), importo(r.profittoRealizzato), r.aperte, importo(r.profittoLatente)]),
     '');
 
-  const percento = (n) => n.toLocaleString('it-IT', { style: 'percent', maximumFractionDigits: 0 });
-  tabella('prodotti', ['Settore', 'Oggetto', 'Miglior acquisto', 'Costo con spedizione', 'Valore di mercato', 'Profitto netto atteso', 'Margine (soglia)'],
-    MM_CORE.situazioneProdotti(dati).map((p) => [p.settore, p.nome,
+  tabella('prodotti', ['Settore', 'Oggetto', 'Listino', 'Miglior acquisto', 'Costo con spedizione', 'Sconto (soglia)', 'Valore di mercato', 'Profitto se venduto oggi'],
+    prodotti.map((p) => [p.settore, p.nome,
+      p.listino ? euro(p.listino) : '—',
       p.acquisto ? link(p.acquisto.sito, p.acquisto.url) : '—',
-      p.acquisto ? euro(p.acquisto.prezzo + p.acquisto.spedizione) : '—',
+      p.acquisto ? euro(p.costo) : '—',
+      p.acquisto && p.listino ? `${percento(p.sconto)} (${percento(p.scontoMinimo)})` : '—',
       p.mercato ? link((p.mercato.venduto ? '' : '~') + euro(p.mercato.prezzo), p.mercato.url) : 'non rilevato',
-      p.stima ? importo(p.stima.profitto, !p.mercato.venduto) : '—',
-      p.stima ? `${percento(p.stima.margine)} (${percento(p.margineMinimo)})` : '—']),
+      p.profitto === null ? '—' : profittoConMargine(p.profitto, p.margine, !p.mercato.venduto)]),
     'Nessun prodotto seguito.');
 </script>
 </body>

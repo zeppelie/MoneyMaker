@@ -1,5 +1,5 @@
 // Uso: node record.js <rilevazioni.json>
-// Il file contiene { "prodotti": [{id, settore, nome}], "osservazioni": [{prodotto, tipo, prezzo, spedizione, sito, url, venduto}] }.
+// Il file contiene { "prodotti": [{id, settore, nome, listino}], "osservazioni": [{prodotto, tipo, prezzo, spedizione, sito, url, venduto}] }.
 // I dati arrivano dal web tramite la routine: si valida tutto e, al primo errore, non si scrive niente.
 const fs = require('fs');
 const path = require('path');
@@ -10,11 +10,13 @@ const PREFISSO = 'window.MM_DATI = ';
 
 function unisci(dati, nuovo, oggi) {
   const errori = [];
-  const prodotti = [...dati.prodotti];
+  let prodotti = [...dati.prodotti];
   for (const p of nuovo.prodotti || []) {
     const errore = validaProdotto(p);
-    if (errore) errori.push(errore);
-    else if (!prodotti.some((esistente) => esistente.id === p.id)) prodotti.push({ id: p.id, settore: p.settore, nome: p.nome });
+    if (errore) { errori.push(errore); continue; }
+    // Un prodotto già seguito viene aggiornato: il listino può cambiare.
+    prodotti = prodotti.filter((esistente) => esistente.id !== p.id);
+    prodotti.push({ id: p.id, settore: p.settore, nome: p.nome, listino: p.listino });
   }
   const idProdotti = new Set(prodotti.map((p) => p.id));
   let osservazioni = [...dati.osservazioni];

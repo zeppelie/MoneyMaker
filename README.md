@@ -1,6 +1,6 @@
 # MoneyMaker
 
-Simulazione di compravendita su due settori (LEGO, NAS): una routine giornaliera di Claude rileva i prezzi, la pagina mostra cosa comprare, dove, e quando e dove rivendere, con il profitto netto simulato. Nessun acquisto reale.
+Simulazione di compravendita di set LEGO da collezione in uscita di produzione (settore NAS sospeso): una routine giornaliera di Claude rileva i prezzi, la pagina segnala i set scontati di almeno il 25% sul listino e simula la rivendita diretta dopo 90 giorni, con obiettivo di margine del 15%. Nessun acquisto reale.
 
 ## Come funziona
 
