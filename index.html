@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoneyMaker</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto; padding: 16px; }
+  h2 { margin-top: 2em; }
+  .tabella { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); white-space: nowrap; }
+  .positivo { color: #1a7f37; }
+  .negativo { color: #cf222e; }
+  .nota { opacity: .7; font-size: .9em; }
+</style>
+</head>
+<body>
+<h1>MoneyMaker</h1>
+<p class="nota" id="aggiornamento"></p>
+
+<h2>Segnali di oggi: cosa e dove comprare</h2>
+<div class="tabella" id="segnali"></div>
+
+<h2>Portafoglio simulato: quando e dove vendere</h2>
+<div class="tabella" id="portafoglio"></div>
+
+<h2>Rendimento per settore</h2>
+<div class="tabella" id="settori"></div>
+
+<p class="nota">Simulazione: nessun acquisto reale. Profitti al netto di commissioni e spedizione stimate, tasse escluse.
+Il simbolo ~ indica un valore stimato da annunci, non da vendite reali.</p>
+
+<script src="data.js"></script>
+<script src="core.js"></script>
+<script>
+  const euro = (n) => n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+
+  function cella(contenuto) {
+    const td = document.createElement('td');
+    if (contenuto instanceof Node) td.append(contenuto); else td.textContent = contenuto;
+    return td;
+  }
+  function link(testo, url) {
+    const a = document.createElement('a');
+    a.textContent = testo; a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    return a;
+  }
+  function importo(n, stimato) {
+    const span = document.createElement('span');
+    span.textContent = (stimato ? '~' : '') + euro(n);
+    span.className = n > 0 ? 'positivo' : n < 0 ? 'negativo' : '';
+    return span;
+  }
+  function tabella(idContenitore, intestazioni, righe, messaggioVuoto) {
+    const contenitore = document.getElementById(idContenitore);
+    if (!righe.length) { contenitore.textContent = messaggioVuoto; return; }
+    const table = document.createElement('table');
+    const testa = table.createTHead().insertRow();
+    intestazioni.forEach((t) => { const th = document.createElement('th'); th.textContent = t; testa.append(th); });
+    const corpo = table.createTBody();
+    righe.forEach((celle) => corpo.insertRow().append(...celle.map(cella)));
+    contenitore.append(table);
+  }
+
+  const dati = window.MM_DATI;
+  const operazioni = MM_CORE.operazioni(dati);
+  const ultimaData = dati.osservazioni.map((o) => o.data).sort().pop();
+  const nomeSettore = (op) => MM_CORE.SETTORI[op.settore].nome;
+
+  document.getElementById('aggiornamento').textContent = ultimaData
+    ? `Ultima rilevazione: ${ultimaData} · ${dati.prodotti.length} prodotti seguiti`
+    : 'Nessuna rilevazione: la routine giornaliera non è ancora stata eseguita.';
+
+  tabella('segnali', ['Settore', 'Oggetto', 'Dove comprare', 'Costo con spedizione', 'Profitto netto atteso', 'Vendere dal', 'Dove vendere'],
+    operazioni.filter((op) => op.dataAcquisto === ultimaData).map((op) => [nomeSettore(op), op.nome,
+      link(op.sitoAcquisto, op.urlAcquisto), euro(op.costo), importo(op.profittoAtteso, op.prezzoStimato), op.vendereDal, link(op.sitoVendita, op.urlVendita)]),
+    'Nessun affare sopra la soglia di margine oggi.');
+
+  tabella('portafoglio', ['Stato', 'Settore', 'Oggetto', 'Comprato il', 'Costo', 'Vendere dal / venduto il', 'Dove vendere', 'Profitto netto'],
+    operazioni.map((op) => [op.stato, nomeSettore(op), op.nome, op.dataAcquisto, euro(op.costo),
+      op.dataVendita || op.vendereDal, link(op.sitoVendita, op.urlVendita), importo(op.profitto, op.prezzoStimato)]),
+    'Nessuna operazione simulata.');
+
+  tabella('settori', ['Settore', 'Operazioni chiuse', 'In profitto', 'Capitale investito', 'Profitto realizzato', 'Aperte', 'Profitto latente'],
+    MM_CORE.riepilogoPerSettore(operazioni).map((r) => [r.settore, r.chiuse, r.chiuse ? `${r.vincenti} su ${r.chiuse}` : '—',
+      euro(r.investito), importo(r.profittoRealizzato), r.aperte, importo(r.profittoLatente)]),
+    '');
+</script>
+</body>
+</html>
